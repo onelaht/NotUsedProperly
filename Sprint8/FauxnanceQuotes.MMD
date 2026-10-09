@@ -1,4 +1,4 @@
-flowchart LR
+flowchart TB
     Action["Open a stock's market page<br/>or select Refresh"] --> Request["Website requests<br/>the latest quote"]
     Request --> Backend["Backend checks access<br/>and prepares the request"]
     Backend -->|"Request quote"| Fauxnance["Fauxnance<br/>Educational market data"]
