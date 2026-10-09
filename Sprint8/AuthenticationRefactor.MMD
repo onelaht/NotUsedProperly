@@ -1,0 +1,16 @@
+flowchart TB
+    subgraph Before["Earlier approach"]
+        Fixed["Fixed demo accounts<br/>Listed in server.js"] --> Limit["New client credentials<br/>could not be added through signup"]
+    end
+    Limit --> Decision["Team decision<br/>Extend the existing backend"]
+    subgraph Now["Current approach"]
+        Signup["Client creates an account"] --> Accounts[("Database-backed accounts")]
+        Accounts --> Login["Client can sign in<br/>with their own credentials"]
+    end
+    Decision --> Signup
+    classDef old fill:#fff7ed,stroke:#c2410c,color:#7c2d12;
+    classDef choice fill:#eff6ff,stroke:#2563eb,color:#17375e;
+    classDef current fill:#e8f5ee,stroke:#006044,color:#10382a;
+    class Fixed,Limit old;
+    class Decision choice;
+    class Signup,Accounts,Login current;

@@ -1,0 +1,22 @@
+flowchart TB
+    subgraph NewClient["New client — account and profile setup"]
+        Create["Create account<br/>Email, password and name"] --> Save["Save account<br/>Assign client role"]
+        Save --> FirstPass["Receive a signed access pass"]
+        FirstPass --> Profile["Complete personal details<br/>and investment preferences"]
+        Profile --> Link["Save profile and link client record"]
+    end
+    subgraph ReturningClient["Returning client — sign-in"]
+        Signin["Enter email and password"] --> Verify["Check saved account<br/>and password"]
+        Verify --> ReturnPass["Receive a signed access pass"]
+    end
+    ReturnPass --> Ready{"Profile complete?"}
+    Ready -->|"No"| Profile
+    Ready -->|"Yes"| Website["Use the client website"]
+    Link --> Website
+    Website --> Request["Website sends access pass<br/>with each protected request"]
+    Request --> Gate["Backend checks the pass<br/>and required permissions"]
+    Gate --> Result["Return permitted results<br/>or reject the request"]
+    classDef journey fill:#e8f5ee,stroke:#006044,color:#10382a;
+    classDef access fill:#eff6ff,stroke:#2563eb,color:#17375e;
+    class Create,Save,Profile,Link,Signin,Verify,Ready,Website journey;
+    class FirstPass,ReturnPass,Request,Gate,Result access;

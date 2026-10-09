@@ -1,0 +1,10 @@
+flowchart LR
+    Action["Open a stock's market page<br/>or select Refresh"] --> Request["Website requests<br/>the latest quote"]
+    Request --> Backend["Backend checks access<br/>and prepares the request"]
+    Backend -->|"Request quote"| Fauxnance["Fauxnance<br/>Educational market data"]
+    Fauxnance -->|"Price and supporting details"| Response["Backend returns quote<br/>and source information"]
+    Response --> Display["Website displays price,<br/>change and freshness details"]
+    classDef app fill:#e8f5ee,stroke:#006044,color:#10382a;
+    classDef external fill:#eff6ff,stroke:#2563eb,color:#17375e;
+    class Action,Request,Backend,Response,Display app;
+    class Fauxnance external;

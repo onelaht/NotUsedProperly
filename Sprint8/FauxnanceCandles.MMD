@@ -1,0 +1,15 @@
+flowchart TB
+    Open["Open a stock's market page"] --> Request["Website requests<br/>daily price history"]
+    Request --> Backend["Backend checks access<br/>and the requested date range"]
+    Backend -->|"Request daily prices"| Fauxnance["Fauxnance<br/>Open, high, low and close for each day"]
+    Fauxnance -->|"Daily values and data notices"| Return["Backend returns history<br/>to the website"]
+    subgraph Browser["How the website draws the chart"]
+        Select["Order dates<br/>Keep up to 30 latest sessions"] --> Scale["Place dates left to right<br/>and prices on a shared scale"]
+        Scale --> Draw["Draw one candle per day<br/>Body: open to close<br/>Wick: low to high"]
+        Draw --> View["Show direction by color and fill<br/>Add legend and daily values table"]
+    end
+    Return --> Select
+    classDef app fill:#e8f5ee,stroke:#006044,color:#10382a;
+    classDef external fill:#eff6ff,stroke:#2563eb,color:#17375e;
+    class Open,Request,Backend,Return,Select,Scale,Draw,View app;
+    class Fauxnance external;

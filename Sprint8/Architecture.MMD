@@ -1,0 +1,13 @@
+flowchart LR
+    People["Clients and staff"] --> Web["Web application<br/>Dashboard, profile and market views"]
+    subgraph Tadpoles["Tadpoles platform"]
+        Web <-->|"Requests and results"| Backend["Application services<br/>Sign-in, permissions and portfolio operations"]
+        Backend <-->|"Save and retrieve records"| Records[("Project database<br/>Accounts, client profiles, portfolios and trades")]
+    end
+    Backend <-->|"Request prices and history"| Fauxnance["Fauxnance<br/>External educational market data"]
+    classDef people fill:#f1f5f9,stroke:#475569,color:#0f172a;
+    classDef platform fill:#e8f5ee,stroke:#006044,color:#10382a;
+    classDef external fill:#eff6ff,stroke:#2563eb,color:#17375e;
+    class People people;
+    class Web,Backend,Records platform;
+    class Fauxnance external;
