@@ -1,0 +1,4209 @@
+openapi: 3.1.0
+info:
+  title: Tadpoles API Starter
+  version: 1.0.0
+  description: Provider-backed USD internal trading and cash movements. Fauxnance supplies market data; this backend owns
+    execution and booking. No real bank transfer, exchange routing or custody is implied. Broader BR-12 markets are deferred.
+    Analyst/aggregate reporting remains unavailable pending a separate reporting source.
+servers:
+- url: /
+  description: Application API root
+tags:
+- name: Authentication
+- name: Users
+- name: Advisors
+- name: Clients
+- name: Portfolios
+- name: Instruments
+- name: Market Data
+- name: Trades
+- name: Trade Suggestions
+- name: Audit
+- name: Analytics
+- name: Dashboard
+security:
+- bearerAuth: []
+paths:
+  /auth/register:
+    post:
+      tags:
+      - Authentication
+      summary: Register a new application user
+      operationId: registerUser
+      x-required-roles:
+      - ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterUserRequest'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterUserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /auth/register/client:
+    post:
+      tags:
+      - Authentication
+      summary: Register a new client account
+      operationId: registerClient
+      x-required-roles: []
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientRegistrationRequest'
+      responses:
+        '201':
+          description: Client account created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientRegistrationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /auth/login:
+    post:
+      tags:
+      - Authentication
+      summary: Authenticate a user and return JWT tokens
+      operationId: login
+      x-required-roles: []
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/auth/refresh:
+    post:
+      tags:
+      - Authentication
+      summary: exchange a refresh token for a new access token
+      operationId: refreshToken
+      x-required-roles: []
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: New access token issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/auth/logout:
+    post:
+      tags:
+      - Authentication
+      summary: revoke the current refresh token
+      operationId: logout
+      x-required-roles:
+      - ADMIN
+      - AUDITOR
+      - ANALYST
+      - ADVISOR
+      - CLIENT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '204':
+          description: Token revoked
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/users/me:
+    get:
+      tags:
+      - Users
+      summary: Current authoritative identity and assigned roles; any authenticated enabled user
+      operationId: getCurrentUser
+      x-required-roles: []
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/users:
+    get:
+      tags:
+      - Users
+      summary: List users for administration
+      operationId: listUsers
+      x-required-roles:
+      - ADMIN
+      responses:
+        '200':
+          description: Paginated user list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/users/{userId}:
+    parameters:
+    - $ref: '#/components/parameters/UserId'
+    get:
+      tags:
+      - Users
+      summary: Get a user by ID
+      operationId: getUserById
+      x-required-roles:
+      - ADMIN
+      responses:
+        '200':
+          description: User record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+      - Users
+      summary: Update a user profile or status
+      operationId: updateUser
+      x-required-roles:
+      - ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/users/{userId}/roles:
+    parameters:
+    - $ref: '#/components/parameters/UserId'
+    put:
+      tags:
+      - Users
+      summary: Replace the roles assigned to a user
+      operationId: setUserRoles
+      x-required-roles:
+      - ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRolesRequest'
+      responses:
+        '200':
+          description: Roles updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/advisors:
+    get:
+      tags:
+      - Advisors
+      summary: List advisors
+      operationId: listAdvisors
+      x-required-roles:
+      - ADMIN
+      - AUDITOR
+      responses:
+        '200':
+          description: Advisor list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdvisorListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - Advisors
+      summary: Create an advisor record
+      operationId: createAdvisor
+      x-required-roles:
+      - ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAdvisorRequest'
+      responses:
+        '201':
+          description: Advisor created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdvisorSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/advisors/{advisorId}:
+    parameters:
+    - $ref: '#/components/parameters/AdvisorId'
+    get:
+      tags:
+      - Advisors
+      summary: Get advisor details
+      operationId: getAdvisorById
+      x-required-roles:
+      - ADMIN
+      - AUDITOR
+      - ADVISOR
+      responses:
+        '200':
+          description: Advisor record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdvisorSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+      - Advisors
+      summary: Update advisor metadata
+      operationId: updateAdvisor
+      x-required-roles:
+      - ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAdvisorRequest'
+      responses:
+        '200':
+          description: Advisor updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdvisorSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/advisors/{advisorId}/clients:
+    parameters:
+    - $ref: '#/components/parameters/AdvisorId'
+    get:
+      tags:
+      - Advisors
+      summary: List clients assigned to an advisor
+      operationId: listAdvisorClients
+      x-required-roles:
+      - ADMIN
+      - ADVISOR
+      responses:
+        '200':
+          description: Clients for advisor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/clients:
+    get:
+      tags:
+      - Clients
+      summary: List clients
+      operationId: listClients
+      x-required-roles:
+      - ADMIN
+      responses:
+        '200':
+          description: Client list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - Clients
+      summary: Create a client record
+      operationId: createClient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateClientRequest'
+      responses:
+        '201':
+          description: Client created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/clients/{clientId}:
+    parameters:
+    - $ref: '#/components/parameters/ClientId'
+    get:
+      tags:
+      - Clients
+      summary: Get client details
+      operationId: getClientById
+      responses:
+        '200':
+          description: Client summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+      - Clients
+      summary: Update a client record
+      operationId: updateClient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateClientRequest'
+      responses:
+        '200':
+          description: Client updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/clients/{clientId}/balance:
+    parameters:
+    - $ref: '#/components/parameters/ClientId'
+    get:
+      tags:
+      - Clients
+      summary: Retired scalar balance endpoint; use owned USD portfolio
+      operationId: getClientBalance
+      responses:
+        '410':
+          description: Retired
+      deprecated: true
+  /api/clients/{clientId}/subscriptions:
+    parameters:
+    - $ref: '#/components/parameters/ClientId'
+    get:
+      tags:
+      - Clients
+      summary: Get subscriptions for a client
+      operationId: listClientSubscriptions
+      x-required-roles:
+      - ADMIN
+      - AUDITOR
+      - ADVISOR
+      - CLIENT
+      responses:
+        '200':
+          description: Subscription list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionListResponse'
+    post:
+      tags:
+      - Clients
+      summary: Subscribe a client to a model portfolio
+      operationId: createClientSubscription
+      x-required-roles:
+      - ADMIN
+      - ADVISOR
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSubscriptionRequest'
+      responses:
+        '201':
+          description: Subscription created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionSummary'
+  /api/clients/{clientId}/holdings:
+    parameters:
+    - $ref: '#/components/parameters/ClientId'
+    get:
+      tags:
+      - Clients
+      summary: Get current holdings for a client
+      operationId: getClientHoldings
+      responses:
+        '200':
+          description: Holding list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HoldingListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags:
+      - Clients
+      summary: Retired direct mutation path; use controlled trading or Trading Operations policy APIs
+      operationId: createClientHolding
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateClientHoldingRequest'
+      responses:
+        '403':
+          description: Direct write denied
+      deprecated: true
+  /api/clients/{clientId}/holdings/{holdingId}:
+    parameters:
+    - $ref: '#/components/parameters/ClientId'
+    - name: holdingId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    get:
+      tags:
+      - Clients
+      summary: Get a holding by ID
+      operationId: getClientHolding
+      responses:
+        '200':
+          description: Holding record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HoldingSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+      - Clients
+      summary: Retired direct mutation path; use controlled trading or Trading Operations policy APIs
+      operationId: updateClientHolding
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateClientHoldingRequest'
+      responses:
+        '403':
+          description: Direct write denied
+      deprecated: true
+  /api/clients/{clientId}/trades:
+    parameters:
+    - $ref: '#/components/parameters/ClientId'
+    get:
+      tags:
+      - Clients
+      summary: List trades for a client
+      operationId: listClientTrades
+      responses:
+        '200':
+          description: Trade history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags:
+      - Clients
+      summary: Retired direct mutation path; use controlled trading or Trading Operations policy APIs
+      operationId: createClientTrade
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateClientTradeRequest'
+      responses:
+        '403':
+          description: Direct write denied
+      deprecated: true
+  /api/clients/{clientId}/trades/{tradeId}:
+    parameters:
+    - $ref: '#/components/parameters/ClientId'
+    - $ref: '#/components/parameters/TradeId'
+    get:
+      tags:
+      - Clients
+      summary: Get a trade by ID for a client
+      operationId: getClientTrade
+      responses:
+        '200':
+          description: Trade summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+      - Clients
+      summary: Retired direct mutation path; use controlled trading or Trading Operations policy APIs
+      operationId: updateClientTrade
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateClientTradeRequest'
+      responses:
+        '403':
+          description: Direct write denied
+      deprecated: true
+  /api/clients/{clientId}/trades/{tradeId}/fill:
+    parameters:
+    - $ref: '#/components/parameters/ClientId'
+    - $ref: '#/components/parameters/TradeId'
+    post:
+      tags:
+      - Clients
+      summary: Retired direct mutation path; use controlled trading or Trading Operations policy APIs
+      operationId: fillClientTrade
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FillOrderRequest'
+      responses:
+        '403':
+          description: Direct write denied
+      deprecated: true
+  /api/advisors/{advisorId}/clients/{clientId}/trade-suggestions:
+    parameters:
+    - $ref: '#/components/parameters/AdvisorId'
+    - $ref: '#/components/parameters/ClientId'
+    post:
+      tags:
+      - Trade Suggestions
+      summary: Suggest a trade for a client
+      operationId: createTradeSuggestion
+      x-required-roles:
+      - ADVISOR
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TradeSuggestionRequest'
+      responses:
+        '201':
+          description: Trade suggestion created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeSuggestionSummary'
+  /api/clients/{clientId}/trade-suggestions:
+    parameters:
+    - $ref: '#/components/parameters/ClientId'
+    get:
+      tags:
+      - Trade Suggestions
+      summary: List trade suggestions for a client
+      operationId: listClientTradeSuggestions
+      x-required-roles:
+      - ADMIN
+      - AUDITOR
+      - ADVISOR
+      - CLIENT
+      responses:
+        '200':
+          description: Trade suggestion list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeSuggestionListResponse'
+  /api/trade-suggestions/{suggestionId}:
+    parameters:
+    - name: suggestionId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    get:
+      tags:
+      - Trade Suggestions
+      summary: Get a trade suggestion by ID
+      operationId: getTradeSuggestionById
+      x-required-roles:
+      - ADMIN
+      - AUDITOR
+      - ADVISOR
+      - CLIENT
+      responses:
+        '200':
+          description: Trade suggestion
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeSuggestionSummary'
+    patch:
+      tags:
+      - Trade Suggestions
+      summary: Update the status of a trade suggestion
+      operationId: updateTradeSuggestionStatus
+      x-required-roles:
+      - CLIENT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TradeSuggestionDecisionRequest'
+      responses:
+        '200':
+          description: Trade suggestion updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeSuggestionSummary'
+  /api/model-portfolios:
+    get:
+      tags:
+      - Portfolios
+      summary: List model portfolios
+      operationId: listModelPortfolios
+      x-required-roles:
+      - ADMIN
+      - AUDITOR
+      - ADVISOR
+      responses:
+        '200':
+          description: Model portfolio list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelPortfolioListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - Portfolios
+      summary: Create a model portfolio
+      operationId: createModelPortfolio
+      x-required-roles:
+      - ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateModelPortfolioRequest'
+      responses:
+        '201':
+          description: Portfolio created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelPortfolioSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/model-portfolios/{portfolioId}:
+    parameters:
+    - $ref: '#/components/parameters/PortfolioId'
+    get:
+      tags:
+      - Portfolios
+      summary: Get model portfolio details
+      operationId: getModelPortfolio
+      x-required-roles:
+      - ADMIN
+      - AUDITOR
+      - ADVISOR
+      - CLIENT
+      responses:
+        '200':
+          description: Portfolio summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelPortfolioSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+      - Portfolios
+      summary: Update portfolio metadata
+      operationId: updateModelPortfolio
+      x-required-roles:
+      - ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateModelPortfolioRequest'
+      responses:
+        '200':
+          description: Portfolio updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelPortfolioSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/model-portfolios/{portfolioId}/holdings:
+    parameters:
+    - $ref: '#/components/parameters/PortfolioId'
+    get:
+      tags:
+      - Portfolios
+      summary: Get target holdings for a model portfolio
+      operationId: getModelPortfolioHoldings
+      x-required-roles:
+      - ADMIN
+      - AUDITOR
+      - ADVISOR
+      - CLIENT
+      responses:
+        '200':
+          description: Target holding list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TargetHoldingListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags:
+      - Portfolios
+      summary: Replace target holdings for a model portfolio
+      operationId: setModelPortfolioHoldings
+      x-required-roles:
+      - ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TargetHoldingListRequest'
+      responses:
+        '200':
+          description: Holdings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TargetHoldingListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/instruments:
+    get:
+      tags:
+      - Instruments
+      summary: List instruments
+      operationId: listInstruments
+      responses:
+        '200':
+          description: Instrument list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstrumentListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags:
+      - Instruments
+      summary: Retired direct mutation path; use controlled trading or Trading Operations policy APIs
+      operationId: createInstrument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateInstrumentRequest'
+      responses:
+        '403':
+          description: Direct write denied
+      deprecated: true
+  /api/instruments/{instrumentId}:
+    parameters:
+    - $ref: '#/components/parameters/InstrumentId'
+    get:
+      tags:
+      - Instruments
+      summary: Get instrument details
+      operationId: getInstrumentById
+      responses:
+        '200':
+          description: Instrument summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstrumentSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+      - Instruments
+      summary: Retired direct mutation path; use controlled trading or Trading Operations policy APIs
+      operationId: updateInstrument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateInstrumentRequest'
+      responses:
+        '403':
+          description: Direct write denied
+      deprecated: true
+  /candles/{symbol}:
+    parameters:
+    - $ref: '#/components/parameters/FauxnanceSymbol'
+    get:
+      tags:
+      - Market Data
+      summary: Retrieve daily OHLCV candles from Fauxnance
+      description: Proxies the configured Fauxnance daily-candle endpoint. The backend currently supports the `1d` interval
+        only and returns the Fauxnance-style success payload.
+      operationId: getCandles
+      parameters:
+      - $ref: '#/components/parameters/CandleFrom'
+      - $ref: '#/components/parameters/CandleTo'
+      - $ref: '#/components/parameters/CandleInterval'
+      responses:
+        '200':
+          description: Candle response in Fauxnance envelope format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FauxnanceCandlesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          description: Fauxnance upstream is unavailable or returned an unusable response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /quotes/{symbol}:
+    parameters:
+    - $ref: '#/components/parameters/FauxnanceSymbol'
+    get:
+      tags:
+      - Market Data
+      summary: Retrieve the latest Fauxnance quote
+      description: Proxies the configured Fauxnance latest-quote endpoint and returns the quote envelope expected by the marketplace
+        contract.
+      operationId: getQuote
+      responses:
+        '200':
+          description: Quote response in Fauxnance envelope format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FauxnanceQuoteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          description: Fauxnance upstream is unavailable or returned an unusable response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/audit-logs:
+    get:
+      tags:
+      - Audit
+      summary: List audit log entries
+      operationId: listAuditLogs
+      x-required-roles:
+      - ADMIN
+      - AUDITOR
+      responses:
+        '200':
+          description: Audit log list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/orders:
+    get:
+      summary: Owned internal and retained historical order history, with explicit provenance
+      x-required-roles:
+      - CLIENT
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 100000
+          default: 0
+      - name: pageSize
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - PENDING
+          - APPROVED
+          - REJECTED
+          - EXECUTED
+          - ACCEPTED
+          - EXECUTING
+          - FILLED
+      - name: side
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - BUY
+          - SELL
+      - name: instrumentId
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      responses:
+        '200':
+          description: Owner-scoped order history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceOrderPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      summary: Durable owned admission or same-key replay. 202 accepted/executing, 200 terminal, 422 persisted admission rejection.
+      x-required-roles:
+      - CLIENT
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{16,128}$
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalOrderReceipt'
+        '202':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalOrderReceipt'
+        '422':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalOrderReceipt'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          description: Admission disabled or dependency unavailable; recover any saved key before creating another instruction.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InternalOrderCommand'
+  /api/orders/{id}:
+    get:
+      summary: Own order record; missing quote, acceptance and posting provenance explicitly disclosed
+      x-required-roles:
+      - CLIENT
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+      responses:
+        '200':
+          description: Own order record; missing quote, acceptance and posting provenance explicitly disclosed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceOrderDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/workspace/client/portfolio:
+    get:
+      summary: Recorded scalar cash and latest holding snapshots; currency and available values unavailable
+      x-required-roles:
+      - CLIENT
+      parameters: []
+      responses:
+        '200':
+          description: Recorded scalar cash and latest holding snapshots; currency and available values unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspacePortfolio'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/workspace/client/instruments:
+    get:
+      summary: Paginated catalog; active does not imply approved tradability
+      x-required-roles:
+      - CLIENT
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 100000
+          default: 0
+      - name: pageSize
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: search
+        in: query
+        required: false
+        schema:
+          type: string
+          maxLength: 100
+      - name: assetClass
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Paginated catalog; active does not imply approved tradability
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceInstrumentPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/workspace/client/trading-availability:
+    get:
+      summary: Always disabled pending user-supplied policy
+      x-required-roles:
+      - CLIENT
+      parameters: []
+      responses:
+        '200':
+          description: Always disabled pending user-supplied policy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceTradingAvailability'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/operations/orders:
+    get:
+      summary: Unavailable until approved scope and genuine data source are configured
+      x-required-roles:
+      - TRADING_OPS
+      x-implementation-status: availability-boundary-only
+      parameters: []
+      responses:
+        '503':
+          description: Dependency/policy unavailable; no source queried or empty metrics fabricated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/operations/orders/{id}:
+    get:
+      summary: Unavailable until approved scope and genuine data source are configured
+      x-required-roles:
+      - TRADING_OPS
+      x-implementation-status: availability-boundary-only
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '503':
+          description: Dependency/policy unavailable; no source queried or empty metrics fabricated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/compliance/investigations:
+    get:
+      summary: Unavailable until approved scope and genuine data source are configured
+      x-required-roles:
+      - COMPLIANCE
+      x-implementation-status: availability-boundary-only
+      parameters: []
+      responses:
+        '503':
+          description: Dependency/policy unavailable; no source queried or empty metrics fabricated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/compliance/orders/{id}/evidence:
+    get:
+      summary: Unavailable until approved scope and genuine data source are configured
+      x-required-roles:
+      - COMPLIANCE
+      x-implementation-status: availability-boundary-only
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '503':
+          description: Dependency/policy unavailable; no source queried or empty metrics fabricated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/compliance/evidence:
+    get:
+      summary: Unavailable until approved scope and genuine data source are configured
+      x-required-roles:
+      - COMPLIANCE
+      x-implementation-status: availability-boundary-only
+      parameters: []
+      responses:
+        '503':
+          description: Dependency/policy unavailable; no source queried or empty metrics fabricated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/analytics/summary:
+    get:
+      summary: Unavailable until approved scope and genuine data source are configured
+      x-required-roles:
+      - ANALYST
+      x-implementation-status: availability-boundary-only
+      parameters: []
+      responses:
+        '503':
+          description: Dependency/policy unavailable; no source queried or empty metrics fabricated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/analytics/trends:
+    get:
+      summary: Unavailable until approved scope and genuine data source are configured
+      x-required-roles:
+      - ANALYST
+      x-implementation-status: availability-boundary-only
+      parameters: []
+      responses:
+        '503':
+          description: Dependency/policy unavailable; no source queried or empty metrics fabricated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/analytics/instruments:
+    get:
+      summary: Unavailable until approved scope and genuine data source are configured
+      x-required-roles:
+      - ANALYST
+      x-implementation-status: availability-boundary-only
+      parameters: []
+      responses:
+        '503':
+          description: Dependency/policy unavailable; no source queried or empty metrics fabricated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/analytics/freshness:
+    get:
+      summary: Unavailable until approved scope and genuine data source are configured
+      x-required-roles:
+      - ANALYST
+      x-implementation-status: availability-boundary-only
+      parameters: []
+      responses:
+        '503':
+          description: Dependency/policy unavailable; no source queried or empty metrics fabricated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/finance/summary:
+    get:
+      summary: Unavailable until approved scope and genuine data source are configured
+      x-required-roles:
+      - FINANCE
+      x-implementation-status: availability-boundary-only
+      parameters: []
+      responses:
+        '503':
+          description: Dependency/policy unavailable; no source queried or empty metrics fabricated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/finance/reconciliations:
+    get:
+      summary: Latest persisted operational reconciliation; null runId means none has run
+      x-required-roles:
+      - FINANCE
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reconciliation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      x-denied-roles:
+      - CLIENT
+    post:
+      summary: Persist a consistent snapshot check; never repairs records automatically
+      x-required-roles:
+      - FINANCE
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reconciliation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      x-denied-roles:
+      - CLIENT
+  /api/users/me/profile:
+    get:
+      summary: Current client profile and onboarding status
+      x-required-roles:
+      - CLIENT
+      parameters: []
+      responses:
+        '200':
+          description: Current client profile and onboarding status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /auth/signup:
+    post:
+      summary: Public client-only signup; role assignment cannot be selected
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - email
+              - password
+              - displayName
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                displayName:
+                  type: string
+      responses:
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '201':
+          description: Client identity and session; additional role field CLIENT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+  /api/users/me/onboarding:
+    put:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteClientOnboardingRequest'
+      summary: Complete current client's basic onboarding
+      x-required-roles:
+      - CLIENT
+      responses:
+        '200':
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientProfile'
+  /api/orders/preview:
+    post:
+      summary: Read-only estimate; reserves nothing and does not guarantee a fill price
+      x-required-roles:
+      - CLIENT
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalOrderPreview'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InternalOrderCommand'
+  /api/orders/by-request/{key}:
+    get:
+      summary: Recover the original client-scoped request receipt before new eligibility checks
+      x-required-roles:
+      - CLIENT
+      parameters:
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalOrderReceipt'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/orders/{id}/events:
+    get:
+      summary: Paged owned lifecycle events
+      x-required-roles:
+      - CLIENT
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: pageSize
+        in: query
+        required: false
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                  page:
+                    type: integer
+                  pageSize:
+                    type: integer
+                  total:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/workspace/client/order-events/stream:
+    get:
+      summary: Resumable authenticated cursor polling, not SSE
+      x-required-roles:
+      - CLIENT
+      parameters:
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                  cursor:
+                    type: integer
+                  reset:
+                    type: boolean
+                  hasMore:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/workspace/client/banks:
+    get:
+      summary: List owned active masked references
+      x-required-roles:
+      - CLIENT
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BankReference'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    post:
+      summary: Add encrypted, format-checked internal funding reference
+      x-required-roles:
+      - CLIENT
+      parameters: []
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankReference'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BankReferenceRequest'
+  /api/workspace/client/banks/{id}:
+    put:
+      summary: Versioned owned reference edit; pending orders block replacement of numbers
+      x-required-roles:
+      - CLIENT
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankReference'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BankReferenceRequest'
+    delete:
+      summary: Deactivate owned reference; preserve historical receipt snapshots
+      x-required-roles:
+      - CLIENT
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: version
+        in: query
+        required: true
+        schema:
+          type: integer
+      responses:
+        '204':
+          description: Deactivated
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/workspace/client/cash-movements:
+    post:
+      summary: Synchronous atomic internal USD posting or durable rejection; no real bank transfer
+      x-required-roles:
+      - CLIENT
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{16,128}$
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashMovement'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CashMovementCommand'
+    get:
+      summary: Paged owned immutable movement history
+      x-required-roles:
+      - CLIENT
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: pageSize
+        in: query
+        required: false
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CashMovement'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/workspace/client/cash-movements/by-request/{key}:
+    get:
+      summary: Recover the owned movement; GET 404 alone does not settle an uncertain POST
+      x-required-roles:
+      - CLIENT
+      parameters:
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashMovement'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/workspace/client/display-currency:
+    get:
+      summary: Display-only available-cash estimate from ECB reference rates; all accounting remains USD
+      x-required-roles:
+      - CLIENT
+      parameters:
+      - name: currency
+        in: query
+        required: true
+        schema:
+          enum:
+          - USD
+          - GBP
+          - INR
+          - EUR
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisplayCurrencyEstimate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          description: Reference rate unavailable, missing, unsafe, future-dated or older than seven calendar days. No conversion
+            performed.
+  /api/workspace/operations/instruments:
+    get:
+      summary: Search versioned trading policies, 100 rows per page
+      x-required-roles:
+      - TRADING_OPS
+      parameters:
+      - name: search
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InstrumentPolicy'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      x-denied-roles:
+      - CLIENT
+    post:
+      summary: Create USD instrument after current provider validation with immutable identity
+      x-required-roles:
+      - TRADING_OPS
+      parameters: []
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstrumentPolicy'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      x-denied-roles:
+      - CLIENT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstrumentPolicyRequest'
+  /api/workspace/operations/instruments/{id}:
+    put:
+      summary: Audited versioned edit or full deactivation; held positions/evidence are preserved
+      x-required-roles:
+      - TRADING_OPS
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstrumentPolicy'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      x-denied-roles:
+      - CLIENT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstrumentPolicyRequest'
+  /api/workspace/operations/instruments/test:
+    get:
+      summary: Read-only symbol recognition, quote usability, chart capability and policy eligibility
+      x-required-roles:
+      - TRADING_OPS
+      parameters:
+      - name: symbol
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recognized:
+                    type: boolean
+                  symbol:
+                    type: string
+                  currency:
+                    type: string
+                  source:
+                    type: string
+                  asOf:
+                    type: string
+                    format: date-time
+                  spreadSource:
+                    type: string
+                  disclaimer:
+                    type: string
+                  quoteUsable:
+                    type: boolean
+                  eligible:
+                    type: boolean
+                  reason:
+                    type: string
+                  chartAvailable:
+                    type: boolean
+                  chartReason:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      x-denied-roles:
+      - CLIENT
+  /api/operations/readiness:
+    get:
+      summary: Schema, reference roles, effective permissions, worker poll times/lag, setup checks and last reconciliation
+      x-required-roles:
+      - TRADING_OPS
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  schemaReady:
+                    type: boolean
+                  referenceDataReady:
+                    type: boolean
+                  runtimePermissions:
+                    type: object
+                    properties:
+                      operationalAccess:
+                        type: boolean
+                      evidenceProtected:
+                        type: boolean
+                  admissionEnabled:
+                    type: boolean
+                  workerEnabled:
+                    type: boolean
+                  workerHealth:
+                    type: object
+                  providerConfigured:
+                    type: boolean
+                  enabledPolicies:
+                    type: integer
+                  pendingJobs:
+                    type: integer
+                  oldestPendingOrderAt:
+                    type:
+                    - string
+                    - 'null'
+                  overdueJobs:
+                    type: integer
+                  cashMovementProcessing:
+                    const: SYNCHRONOUS
+                  pendingCashMovements:
+                    const: 0
+                  historicalExceptions:
+                    type: integer
+                  setupChecks:
+                    type: array
+                    items:
+                      type: object
+                  reconciliation:
+                    $ref: '#/components/schemas/Reconciliation'
+                  note:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      x-denied-roles:
+      - CLIENT
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    AdvisorId:
+      name: advisorId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    ClientId:
+      name: clientId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    PortfolioId:
+      name: portfolioId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    InstrumentId:
+      name: instrumentId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    FauxnanceSymbol:
+      name: symbol
+      in: path
+      required: true
+      description: Case-insensitive Fauxnance symbol. Responses use uppercase.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 32
+      example: AAPL
+    CandleFrom:
+      name: from
+      in: query
+      required: false
+      description: Inclusive start date for the candle range.
+      schema:
+        type: string
+        format: date
+      example: 2026-01-01 00:00:00+00:00
+    CandleTo:
+      name: to
+      in: query
+      required: false
+      description: Inclusive end date for the candle range.
+      schema:
+        type: string
+        format: date
+      example: 2026-01-31 00:00:00+00:00
+    CandleInterval:
+      name: interval
+      in: query
+      required: false
+      description: Candle interval. Version 1 supports only `1d`.
+      schema:
+        type: string
+        default: 1d
+        enum:
+        - 1d
+    TradeId:
+      name: tradeId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+  responses:
+    BadRequest:
+      description: Invalid or malformed request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Authenticated but missing the required role
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Duplicate resource or conflicting state
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TooManyRequests:
+      description: Request limit exceeded. Retry according to Retry-After when supplied.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalServerError:
+      description: Unexpected server failure. An uncertain cash movement or order submission must be recovered using the original
+        request key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    LoginRequest:
+      type: object
+      required:
+      - username
+      - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+    LoginResponse:
+      type: object
+      required:
+      - token
+      - tokenType
+      - expiresIn
+      properties:
+        token:
+          type: string
+        tokenType:
+          type: string
+          example: Bearer
+        expiresIn:
+          type: integer
+          format: int64
+          example: 3600
+        userId:
+          type:
+          - integer
+          - 'null'
+        clientId:
+          type:
+          - integer
+          - 'null'
+        email:
+          type: string
+        displayName:
+          type: string
+        onboardingComplete:
+          type: boolean
+    RefreshTokenRequest:
+      type: object
+      required:
+      - refreshToken
+      properties:
+        refreshToken:
+          type: string
+    RegisterUserRequest:
+      type: object
+      required:
+      - username
+      - email
+      - password
+      - displayName
+      - roleType
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        displayName:
+          type: string
+        roleType:
+          type: string
+          enum:
+          - ADMIN
+          - AUDITOR
+          - ANALYST
+          - ADVISOR
+          - CLIENT
+          - COMPLIANCE
+          - SUPPORT
+          - OPERATIONS
+          - REPORTING
+          - GUEST
+          - TRADING_OPS
+          - FINANCE
+        advisorName:
+          type: string
+          nullable: true
+        enabled:
+          type: boolean
+          nullable: true
+          default: true
+    ClientRegistrationRequest:
+      type: object
+      required:
+      - username
+      - email
+      - password
+      - displayName
+      - clientName
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        displayName:
+          type: string
+        clientName:
+          type: string
+    RegisterUserResponse:
+      type: object
+      required:
+      - userId
+      - username
+      - displayName
+      - role
+      properties:
+        userId:
+          type: integer
+          format: int64
+        username:
+          type: string
+        displayName:
+          type: string
+        role:
+          type: string
+        advisorId:
+          type: integer
+          format: int64
+          nullable: true
+    ClientRegistrationResponse:
+      type: object
+      required:
+      - userId
+      - username
+      - displayName
+      - role
+      - clientId
+      properties:
+        userId:
+          type: integer
+          format: int64
+        username:
+          type: string
+        displayName:
+          type: string
+        role:
+          type: string
+          enum:
+          - CLIENT
+        clientId:
+          type: integer
+          format: int64
+    AuthTokens:
+      type: object
+      required:
+      - accessToken
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        tokenType:
+          type: string
+          example: Bearer
+        expiresInSeconds:
+          type: integer
+          format: int64
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: integer
+          format: int32
+        error:
+          type: string
+        message:
+          type: string
+          nullable: true
+        path:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+          nullable: true
+    UserProfile:
+      type: object
+      properties:
+        userId:
+          type: integer
+          format: int64
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        enabled:
+          type: boolean
+        roles:
+          type: array
+          items:
+            type: string
+        advisorId:
+          type: integer
+          format: int64
+          nullable: true
+        clientId:
+          type: integer
+          format: int64
+          nullable: true
+    UserListResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserProfile'
+    UpdateUserRequest:
+      type: object
+      properties:
+        displayName:
+          type: string
+        email:
+          type: string
+          format: email
+        enabled:
+          type: boolean
+    UserRolesRequest:
+      type: object
+      required:
+      - roles
+      properties:
+        roles:
+          type: array
+          items:
+            type: string
+    AdvisorSummary:
+      type: object
+      properties:
+        advisorId:
+          type: integer
+          format: int64
+        advisorName:
+          type: string
+        userId:
+          type: integer
+          format: int64
+          nullable: true
+    AdvisorListResponse:
+      type: object
+      properties:
+        advisors:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdvisorSummary'
+    CreateAdvisorRequest:
+      type: object
+      required:
+      - advisorName
+      properties:
+        advisorName:
+          type: string
+        userId:
+          type: integer
+          format: int64
+          nullable: true
+    UpdateAdvisorRequest:
+      type: object
+      properties:
+        advisorName:
+          type: string
+        userId:
+          type: integer
+          format: int64
+          nullable: true
+    ClientSummary:
+      type: object
+      properties:
+        clientId:
+          type: integer
+          format: int64
+        userId:
+          type: integer
+          format: int64
+          nullable: true
+        clientName:
+          type: string
+        advisorId:
+          type: integer
+          format: int64
+          nullable: true
+        modelPortfolioId:
+          type: integer
+          format: int64
+          nullable: true
+        cashBalance:
+          type: number
+          format: double
+    ClientListResponse:
+      type: object
+      properties:
+        clients:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClientSummary'
+    CreateClientRequest:
+      type: object
+      required:
+      - clientName
+      properties:
+        clientName:
+          type: string
+        advisorId:
+          type: integer
+          format: int64
+          nullable: true
+        modelPortfolioId:
+          type: integer
+          format: int64
+          nullable: true
+        createdByUserId:
+          type: integer
+          format: int64
+          nullable: true
+        cashBalance:
+          type: number
+          format: double
+          description: Retired funding field. Creation permits only omitted/zero; metadata update rejects any value. Fund
+            through owned cash movements.
+    UpdateClientRequest:
+      type: object
+      properties:
+        clientName:
+          type: string
+        advisorId:
+          type: integer
+          format: int64
+          nullable: true
+        modelPortfolioId:
+          type: integer
+          format: int64
+          nullable: true
+        cashBalance:
+          type: number
+          format: double
+          description: Retired funding field. Creation permits only omitted/zero; metadata update rejects any value. Fund
+            through owned cash movements.
+    ClientBalanceResponse:
+      type: object
+      properties:
+        clientId:
+          type: integer
+          format: int64
+        cashBalance:
+          type: number
+          format: double
+    AssignAdvisorRequest:
+      type: object
+      required:
+      - advisorId
+      properties:
+        advisorId:
+          type: integer
+          format: int64
+    ModelPortfolioSummary:
+      type: object
+      properties:
+        modelPortfolioId:
+          type: integer
+          format: int64
+        modelName:
+          type: string
+        description:
+          type: string
+        isActive:
+          type: boolean
+    ModelPortfolioListResponse:
+      type: object
+      properties:
+        modelPortfolios:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelPortfolioSummary'
+    CreateModelPortfolioRequest:
+      type: object
+      required:
+      - modelName
+      properties:
+        modelName:
+          type: string
+        description:
+          type: string
+        createdByUserId:
+          type: integer
+          format: int64
+          nullable: true
+    UpdateModelPortfolioRequest:
+      type: object
+      properties:
+        modelName:
+          type: string
+        description:
+          type: string
+        isActive:
+          type: boolean
+    TargetHoldingItem:
+      type: object
+      required:
+      - instrumentId
+      - targetWeightPct
+      properties:
+        instrumentId:
+          type: integer
+          format: int64
+        targetWeightPct:
+          type: number
+          format: float
+    TargetHoldingListRequest:
+      type: object
+      required:
+      - holdings
+      properties:
+        holdings:
+          type: array
+          items:
+            $ref: '#/components/schemas/TargetHoldingItem'
+    TargetHoldingListResponse:
+      type: object
+      properties:
+        portfolioId:
+          type: integer
+          format: int64
+        holdings:
+          type: array
+          items:
+            $ref: '#/components/schemas/TargetHoldingItem'
+    InstrumentSummary:
+      type: object
+      properties:
+        instrumentId:
+          type: integer
+          format: int64
+        instrumentName:
+          type: string
+        ticker:
+          type: string
+        currency:
+          type: string
+        assetClass:
+          type: string
+        securityType:
+          type: string
+        isActive:
+          type: boolean
+    InstrumentListResponse:
+      type: object
+      properties:
+        instruments:
+          type: array
+          items:
+            $ref: '#/components/schemas/InstrumentSummary'
+    CreateInstrumentRequest:
+      type: object
+      required:
+      - instrumentName
+      - ticker
+      - currency
+      properties:
+        instrumentName:
+          type: string
+        ticker:
+          type: string
+        currency:
+          type: string
+        assetClass:
+          type: string
+        securityType:
+          type: string
+        isActive:
+          type: boolean
+    UpdateInstrumentRequest:
+      type: object
+      properties:
+        instrumentName:
+          type: string
+        ticker:
+          type: string
+        currency:
+          type: string
+        assetClass:
+          type: string
+        securityType:
+          type: string
+        isActive:
+          type: boolean
+    FauxnanceCandle:
+      type: object
+      required:
+      - date
+      - open
+      - high
+      - low
+      - close
+      - adjclose
+      - synthetic
+      properties:
+        date:
+          type: string
+          format: date
+        open:
+          type: number
+          format: double
+        high:
+          type: number
+          format: double
+        low:
+          type: number
+          format: double
+        close:
+          type: number
+          format: double
+        adjclose:
+          type: number
+          format: double
+        volume:
+          type: integer
+          format: int64
+          nullable: true
+        synthetic:
+          type:
+          - boolean
+          - 'null'
+    FauxnanceCandlesData:
+      type: object
+      required:
+      - symbol
+      - interval
+      - currency
+      - candles
+      properties:
+        symbol:
+          type: string
+          example: AAPL
+        interval:
+          type: string
+          enum:
+          - 1d
+        currency:
+          type: string
+          example: USD
+        candles:
+          type: array
+          items:
+            $ref: '#/components/schemas/FauxnanceCandle'
+    FauxnanceMarketDataMeta:
+      type: object
+      required:
+      - asOf
+      - disclaimer
+      - symbol
+      - source
+      properties:
+        asOf:
+          type: string
+          format: date-time
+        disclaimer:
+          type: string
+          example: Educational data. Not for investment use.
+        symbol:
+          type: string
+          example: AAPL
+        source:
+          type: string
+          example: stored
+        stale:
+          type: boolean
+          nullable: true
+        partial:
+          type: boolean
+          nullable: true
+        availableFrom:
+          type: string
+          format: date
+          nullable: true
+    FauxnanceQuote:
+      type: object
+      required:
+      - symbol
+      - price
+      - bid
+      - ask
+      - spreadBps
+      - currency
+      - change
+      - changePercent
+      - previousClose
+      - asOf
+      - marketState
+      properties:
+        symbol:
+          type: string
+          example: AAPL
+        price:
+          type: number
+          exclusiveMinimum: 0
+          example: 313.53
+        bid:
+          type: number
+          exclusiveMinimum: 0
+          example: 313.5
+        ask:
+          type: number
+          exclusiveMinimum: 0
+          example: 313.56
+        spreadBps:
+          type: number
+          minimum: 0
+          example: 1.8587
+        currency:
+          type: string
+          nullable: true
+          example: USD
+        change:
+          type: number
+          nullable: true
+          example: 3.63
+        changePercent:
+          type: number
+          nullable: true
+          example: 1.1713
+        previousClose:
+          type: number
+          nullable: true
+          example: 309.9
+        asOf:
+          type: string
+          format: date-time
+          example: 2026-08-26 16:13:24+00:00
+        marketState:
+          type: string
+          enum:
+          - open
+          - closed
+          - pre
+          - post
+          - unknown
+          example: open
+    FauxnanceQuoteMeta:
+      type: object
+      required:
+      - asOf
+      - disclaimer
+      - symbol
+      - source
+      - spreadSource
+      - stale
+      properties:
+        asOf:
+          type: string
+          format: date-time
+        disclaimer:
+          type: string
+          example: Educational data. Not for investment use.
+        symbol:
+          type: string
+          example: AAPL
+        source:
+          type: string
+          example: cache
+        spreadSource:
+          type: string
+          enum:
+          - modelled
+          example: modelled
+        stale:
+          type: boolean
+    FauxnanceQuoteResponse:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          $ref: '#/components/schemas/FauxnanceQuote'
+        meta:
+          $ref: '#/components/schemas/FauxnanceQuoteMeta'
+    FauxnanceCandlesResponse:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          $ref: '#/components/schemas/FauxnanceCandlesData'
+        meta:
+          $ref: '#/components/schemas/FauxnanceMarketDataMeta'
+    TradeRequest:
+      type: object
+      required:
+      - clientId
+      - instrumentId
+      - tradeType
+      - quantity
+      - price
+      - tradeDate
+      properties:
+        clientId:
+          type: integer
+          format: int64
+        instrumentId:
+          type: integer
+          format: int64
+        tradeType:
+          type: string
+          enum:
+          - BUY
+          - SELL
+        quantity:
+          type: number
+          format: double
+        price:
+          type: number
+          format: double
+        tradeDate:
+          type: string
+          format: date
+        reason:
+          type: string
+    TradeSummary:
+      type: object
+      properties:
+        tradeId:
+          type: integer
+          format: int64
+        clientId:
+          type: integer
+          format: int64
+        instrumentId:
+          type: integer
+          format: int64
+        submittedByUserId:
+          type: integer
+          format: int64
+          nullable: true
+        approvedByUserId:
+          type: integer
+          format: int64
+          nullable: true
+        tradeType:
+          type: string
+          enum:
+          - BUY
+          - SELL
+        quantity:
+          type: number
+          format: double
+        price:
+          type: number
+          format: double
+        tradeDate:
+          type: string
+          format: date
+        status:
+          type: string
+        executedAt:
+          type: string
+          format: date-time
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+    CreateClientHoldingRequest:
+      type: object
+      required:
+      - instrumentId
+      - quantity
+      - asOfDate
+      properties:
+        instrumentId:
+          type: integer
+          format: int64
+        quantity:
+          type: number
+          format: double
+        asOfDate:
+          type: string
+          format: date
+    UpdateClientHoldingRequest:
+      type: object
+      properties:
+        quantity:
+          type: number
+          format: double
+        asOfDate:
+          type: string
+          format: date
+    CreateClientTradeRequest:
+      type: object
+      required:
+      - instrumentId
+      - tradeType
+      - quantity
+      - price
+      - tradeDate
+      properties:
+        instrumentId:
+          type: integer
+          format: int64
+        submittedByUserId:
+          type: integer
+          format: int64
+          nullable: true
+        approvedByUserId:
+          type: integer
+          format: int64
+          nullable: true
+        tradeType:
+          type: string
+          enum:
+          - BUY
+          - SELL
+        quantity:
+          type: number
+          format: double
+        price:
+          type: number
+          format: double
+        tradeDate:
+          type: string
+          format: date
+        status:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+    UpdateClientTradeRequest:
+      type: object
+      properties:
+        submittedByUserId:
+          type: integer
+          format: int64
+          nullable: true
+        approvedByUserId:
+          type: integer
+          format: int64
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        executedAt:
+          type: string
+          format: date-time
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+    FillOrderRequest:
+      type: object
+      properties:
+        approvedByUserId:
+          type: integer
+          format: int64
+          nullable: true
+        price:
+          type: number
+          format: double
+          nullable: true
+        executedAt:
+          type: string
+          format: date-time
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+    OrderFillResponse:
+      type: object
+      required:
+      - clientId
+      - cashBalance
+      - holdingId
+      - holdingQuantity
+      - tradeId
+      - tradeStatus
+      - executedAt
+      properties:
+        clientId:
+          type: integer
+          format: int64
+        cashBalance:
+          type: number
+          format: double
+        holdingId:
+          type: integer
+          format: int64
+        holdingQuantity:
+          type: number
+          format: double
+        tradeId:
+          type: integer
+          format: int64
+        tradeStatus:
+          type: string
+        executedAt:
+          type: string
+          format: date-time
+    TradeSuggestionRequest:
+      type: object
+      required:
+      - instrumentId
+      - tradeType
+      - quantity
+      properties:
+        instrumentId:
+          type: integer
+          format: int64
+        tradeType:
+          type: string
+          enum:
+          - BUY
+          - SELL
+        quantity:
+          type: number
+          format: double
+        proposedPrice:
+          type: number
+          format: double
+          nullable: true
+        notes:
+          type: string
+    TradeSuggestionSummary:
+      type: object
+      properties:
+        suggestionId:
+          type: integer
+          format: int64
+        advisorId:
+          type: integer
+          format: int64
+        clientId:
+          type: integer
+          format: int64
+        instrumentId:
+          type: integer
+          format: int64
+        tradeType:
+          type: string
+          enum:
+          - BUY
+          - SELL
+        quantity:
+          type: number
+          format: double
+        proposedPrice:
+          type: number
+          format: double
+          nullable: true
+        status:
+          type: string
+          enum:
+          - SUGGESTED
+          - VIEWED
+          - ACCEPTED
+          - REJECTED
+          - EXPIRED
+        suggestedAt:
+          type: string
+          format: date-time
+    TradeSuggestionListResponse:
+      type: object
+      properties:
+        suggestions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TradeSuggestionSummary'
+    TradeSuggestionDecisionRequest:
+      type: object
+      required:
+      - status
+      properties:
+        status:
+          type: string
+          enum:
+          - VIEWED
+          - ACCEPTED
+          - REJECTED
+          - EXPIRED
+        notes:
+          type: string
+    TradeListResponse:
+      type: object
+      properties:
+        trades:
+          type: array
+          items:
+            $ref: '#/components/schemas/TradeSummary'
+    UpdateTradeRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+          - PENDING
+          - APPROVED
+          - REJECTED
+          - EXECUTED
+        approvedByUserId:
+          type: integer
+          format: int64
+          nullable: true
+        executedAt:
+          type: string
+          format: date-time
+          nullable: true
+        reason:
+          type: string
+    SubscriptionSummary:
+      type: object
+      properties:
+        subscriptionId:
+          type: integer
+          format: int64
+        clientId:
+          type: integer
+          format: int64
+        modelPortfolioId:
+          type: integer
+          format: int64
+        subscribedDate:
+          type: string
+          format: date
+        endedDate:
+          type: string
+          format: date
+          nullable: true
+        status:
+          type: string
+    SubscriptionListResponse:
+      type: object
+      properties:
+        subscriptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubscriptionSummary'
+    CreateSubscriptionRequest:
+      type: object
+      required:
+      - modelPortfolioId
+      - subscribedDate
+      properties:
+        modelPortfolioId:
+          type: integer
+          format: int64
+        subscribedDate:
+          type: string
+          format: date
+        approvedByUserId:
+          type: integer
+          format: int64
+          nullable: true
+    HoldingSummary:
+      type: object
+      properties:
+        holdingId:
+          type: integer
+          format: int64
+        clientId:
+          type: integer
+          format: int64
+        instrumentId:
+          type: integer
+          format: int64
+        quantity:
+          type: number
+          format: double
+        asOfDate:
+          type: string
+          format: date
+    HoldingListResponse:
+      type: object
+      properties:
+        holdings:
+          type: array
+          items:
+            $ref: '#/components/schemas/HoldingSummary'
+    AuditLogSummary:
+      type: object
+      properties:
+        auditLogId:
+          type: integer
+          format: int64
+        userId:
+          type: integer
+          format: int64
+          nullable: true
+        entityName:
+          type: string
+        entityId:
+          type: string
+          nullable: true
+        actionType:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    AuditLogListResponse:
+      type: object
+      properties:
+        auditLogs:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLogSummary'
+    AnalyticsSummaryResponse:
+      type: object
+      properties:
+        scope:
+          type: string
+          description: Scope of the analytics payload, such as admin, advisor, client, or portfolio
+        generatedAt:
+          type: string
+          format: date-time
+        metrics:
+          type: object
+          additionalProperties: true
+        series:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    DashboardResponse:
+      type: object
+      properties:
+        dashboardType:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+        widgets:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    WorkspaceOrder:
+      type: object
+      properties:
+        orderId:
+          type: integer
+        instrumentId:
+          type: integer
+        ticker:
+          type: string
+        instrumentName:
+          type: string
+        currency:
+          type: string
+        side:
+          type: string
+        status:
+          type: string
+        quantity:
+          type: number
+        recordedPrice:
+          type: number
+        tradeDate:
+          type: string
+          format: date
+        executedAt:
+          type:
+          - string
+          - 'null'
+          description: Legacy local timestamp; timezone not recorded
+        reason:
+          type:
+          - string
+          - 'null'
+        exactQuantity:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        recordKind:
+          type: string
+        executionMode:
+          type: string
+        submittedAt:
+          type: string
+          format: date-time
+        acceptedAt:
+          type: string
+          format: date-time
+        version:
+          type: integer
+        rejectionStage:
+          type: string
+    WorkspaceOrderPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceOrder'
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+    WorkspaceOrderDetail:
+      type: object
+      properties:
+        order:
+          $ref: '#/components/schemas/WorkspaceOrder'
+        evidenceCompleteness:
+          type: string
+          enum:
+          - INCOMPLETE_LEGACY
+          - RETAINED_INTERNAL_EVIDENCE
+          - MISSING_FILL
+        explanation:
+          type: string
+        fills:
+          type: array
+          items:
+            type: object
+        decisions:
+          type: array
+          items:
+            type: object
+        events:
+          type: array
+          items:
+            type: object
+        quotes:
+          type: array
+          items:
+            type: object
+        reservation:
+          type:
+          - object
+          - 'null'
+    WorkspacePosition:
+      type: object
+      properties:
+        holdingId:
+          type: integer
+        instrumentId:
+          type: integer
+        ticker:
+          type: string
+        name:
+          type: string
+        currency:
+          type: string
+        quantity:
+          type: number
+        asOfDate:
+          type: string
+          format: date
+    WorkspacePortfolio:
+      type: object
+      properties:
+        tradingEnabled:
+          type: boolean
+        balances:
+          type: array
+          items:
+            type: object
+            properties:
+              currency:
+                const: USD
+              posted:
+                type: string
+                pattern: ^[0-9]+(\.[0-9]+)?$
+                description: Exact decimal string; never a binary floating-point accounting value.
+              reserved:
+                type: string
+                pattern: ^[0-9]+(\.[0-9]+)?$
+                description: Exact decimal string; never a binary floating-point accounting value.
+              available:
+                type: string
+                pattern: ^[0-9]+(\.[0-9]+)?$
+                description: Exact decimal string; never a binary floating-point accounting value.
+              updatedAt:
+                type: string
+                format: date-time
+        currentPositions:
+          type: array
+          items:
+            type: object
+            properties:
+              instrumentId:
+                type: integer
+              ticker:
+                type: string
+              name:
+                type: string
+              currency:
+                type: string
+              owned:
+                type: string
+                pattern: ^[0-9]+(\.[0-9]+)?$
+                description: Exact decimal string; never a binary floating-point accounting value.
+              reserved:
+                type: string
+                pattern: ^[0-9]+(\.[0-9]+)?$
+                description: Exact decimal string; never a binary floating-point accounting value.
+              available:
+                type: string
+                pattern: ^[0-9]+(\.[0-9]+)?$
+                description: Exact decimal string; never a binary floating-point accounting value.
+              updatedAt:
+                type: string
+                format: date-time
+        migrationExceptions:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              kind:
+                type: string
+              recordedAt:
+                type: string
+                format: date-time
+        retrievedAt:
+          type: string
+          format: date-time
+        limitation:
+          type: string
+    WorkspaceInstrumentPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/InstrumentSummary'
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+    WorkspaceTradingAvailability:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        code:
+          type: string
+        reason:
+          type: string
+        mode:
+          type: string
+        policyVersion:
+          type: string
+        quantityUnit:
+          type: string
+        venue:
+          type: string
+    ClientProfile:
+      type: object
+      properties:
+        userId:
+          type: integer
+        clientId:
+          type:
+          - integer
+          - 'null'
+        email:
+          type: string
+        displayName:
+          type: string
+        onboardingComplete:
+          type: boolean
+        clientName:
+          type: string
+        phone:
+          type: string
+        dateOfBirth:
+          type: string
+        addressLine1:
+          type: string
+        addressLine2:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        postalCode:
+          type: string
+        country:
+          type: string
+        employmentStatus:
+          type: string
+        riskTolerance:
+          type: string
+        investmentObjective:
+          type: string
+        preferredContactMethod:
+          type: string
+        paperlessStatements:
+          type: boolean
+        marketingOptIn:
+          type: boolean
+        netWorth:
+          type:
+          - number
+          - 'null'
+      description: Existing client onboarding profile; retains address and preference fields.
+    CompleteClientOnboardingRequest:
+      properties:
+        clientName:
+          type: string
+        phone:
+          type: string
+        dateOfBirth:
+          type: string
+        addressLine1:
+          type: string
+        addressLine2:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        postalCode:
+          type: string
+        country:
+          type: string
+        employmentStatus:
+          type: string
+        riskTolerance:
+          type: string
+        investmentObjective:
+          type: string
+        preferredContactMethod:
+          type: string
+        paperlessStatements:
+          type: boolean
+        marketingOptIn:
+          type: boolean
+        netWorth:
+          type:
+          - number
+          - 'null'
+      type: object
+    InternalOrderCommand:
+      type: object
+      properties:
+        instrumentId:
+          type: integer
+          minimum: 1
+        side:
+          enum:
+          - BUY
+          - SELL
+        quantity:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        orderType:
+          const: MARKET
+      required:
+      - instrumentId
+      - side
+      - quantity
+      - orderType
+      additionalProperties: false
+    InternalOrderReceipt:
+      type: object
+      properties:
+        orderId:
+          type: integer
+        status:
+          enum:
+          - ACCEPTED
+          - EXECUTING
+          - FILLED
+          - REJECTED
+        version:
+          type: integer
+        acceptedAt:
+          type: string
+          format: date-time
+        message:
+          type: string
+        code:
+          type: string
+        rejectionStage:
+          type: string
+        executionMode:
+          type: string
+    InternalOrderPreview:
+      type: object
+      properties:
+        price:
+          type:
+          - string
+          - 'null'
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        gross:
+          type:
+          - string
+          - 'null'
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        fee:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        availableCash:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        availableQuantity:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        projectedCash:
+          type:
+          - string
+          - 'null'
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        projectedQuantity:
+          type:
+          - string
+          - 'null'
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        eligible:
+          type: boolean
+        code:
+          type: string
+        reason:
+          type: string
+        executionMode:
+          const: INTERNAL
+        currency:
+          const: USD
+        quantityUnit:
+          type: string
+        venue:
+          type: string
+        policyVersion:
+          type: string
+        quoteTime:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        source:
+          type: string
+        message:
+          type: string
+    BankReference:
+      type: object
+      properties:
+        bankId:
+          type: string
+          format: uuid
+        nickname:
+          type: string
+        maskedAccount:
+          type: string
+        defaultAccount:
+          type: boolean
+        version:
+          type: integer
+      required:
+      - bankId
+      - nickname
+      - maskedAccount
+      - defaultAccount
+      - version
+    BankReferenceRequest:
+      type: object
+      properties:
+        nickname:
+          type: string
+          minLength: 2
+          maxLength: 50
+        routingNumber:
+          type: string
+          pattern: ^[0-9]{9}$
+        accountNumber:
+          type: string
+          pattern: ^[0-9]{4,17}$
+        defaultAccount:
+          type: boolean
+        version:
+          type: integer
+      required:
+      - nickname
+      additionalProperties: false
+      description: New reference requires both full numbers; edit omits both to retain them. Version is required on edit.
+        Numbers preserve leading zeros. Full values are never returned.
+    CashMovementCommand:
+      type: object
+      properties:
+        bankId:
+          type: string
+          format: uuid
+        direction:
+          enum:
+          - DEPOSIT
+          - WITHDRAW
+        amount:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+      required:
+      - bankId
+      - direction
+      - amount
+      additionalProperties: false
+      description: Positive USD up to 10000, at most two decimals. Deposits also capped at 10000 per UTC day.
+    CashMovement:
+      type: object
+      properties:
+        movementId:
+          type: string
+          format: uuid
+        bankId:
+          type: string
+          format: uuid
+        direction:
+          enum:
+          - DEPOSIT
+          - WITHDRAW
+        amount:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        currency:
+          const: USD
+        status:
+          enum:
+          - SETTLED
+          - REJECTED
+        reason:
+          type:
+          - string
+          - 'null'
+        bankSnapshot:
+          type: string
+        recordedAt:
+          type: string
+          format: date-time
+    DisplayCurrencyEstimate:
+      type: object
+      properties:
+        currency:
+          enum:
+          - USD
+          - GBP
+          - INR
+          - EUR
+        usd:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        estimatedValue:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        targetPerUsd:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        rateDate:
+          type: string
+          format: date
+        checkedAt:
+          type: string
+          format: date-time
+        source:
+          type: string
+        sourceUrl:
+          type: string
+          format: uri
+        note:
+          type: string
+    InstrumentPolicyRequest:
+      type: object
+      properties:
+        ticker:
+          type: string
+        name:
+          type: string
+        providerSymbol:
+          type: string
+        venue:
+          type: string
+        quantityStep:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        maxQuantity:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        maxNotional:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        quoteMaxAgeSeconds:
+          type: integer
+          minimum: 1
+          maximum: 600
+        active:
+          type: boolean
+        buyAllowed:
+          type: boolean
+        sellAllowed:
+          type: boolean
+        reason:
+          type: string
+          minLength: 8
+          maxLength: 500
+        revision:
+          type: integer
+      required:
+      - ticker
+      - name
+      - providerSymbol
+      - venue
+      - quantityStep
+      - maxQuantity
+      - maxNotional
+      - quoteMaxAgeSeconds
+      - active
+      - buyAllowed
+      - sellAllowed
+      - reason
+      - revision
+    InstrumentPolicy:
+      type: object
+      properties:
+        ticker:
+          type: string
+        name:
+          type: string
+        providerSymbol:
+          type: string
+        venue:
+          type: string
+        quantityStep:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        maxQuantity:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        maxNotional:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        quoteMaxAgeSeconds:
+          type: integer
+          minimum: 1
+          maximum: 600
+        active:
+          type: boolean
+        buyAllowed:
+          type: boolean
+        sellAllowed:
+          type: boolean
+        reason:
+          type: string
+          minLength: 8
+          maxLength: 500
+        revision:
+          type: integer
+        instrumentId:
+          type: integer
+        currency:
+          const: USD
+        validatedAt:
+          type: string
+          format: date-time
+    Reconciliation:
+      type: object
+      properties:
+        runId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        checkedAt:
+          type: string
+          format: date-time
+        matched:
+          type: boolean
+        exceptions:
+          type: array
+          items:
+            type: object
+            properties:
+              kind:
+                type: string
+              reference:
+                type: string
+        historicalExceptions:
+          type: integer
+        scope:
+          type: string
+        message:
+          type: string
