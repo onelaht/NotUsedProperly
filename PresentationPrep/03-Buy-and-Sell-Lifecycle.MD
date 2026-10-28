@@ -20,6 +20,23 @@ flowchart LR
 
 An estimate is not a guaranteed execution price or maximum-spend order. Acceptance is not a fill. A missing browser response is not proof of failure.
 
+### What does admission mean?
+
+**Admission is the server's check after you press Confirm: “Can we accept this instruction for processing right now?”** Think of it as checking an order at the entrance to the processing queue.
+
+The server checks whether your account is ready, the instrument and trading direction are allowed, the price information is usable, and you have enough available cash to buy or available units to sell.
+
+- **If the checks pass:** the server records the order as ACCEPTED, sets aside the cash or units it needs, and saves a processing job. That is a successful admission.
+- **If a business-rule check fails:** the server records a REJECTED order with a reason, such as insufficient cash. It does not reserve resources or queue that order for execution. Invalid requests or a provider outage can instead fail before an order is recorded.
+
+For example, suppose you have USD 500 available and request 2 shares at an admission ask price of USD 100 each. Admission can accept the instruction and reserve USD 200, leaving USD 300 available for other actions. You still own no new shares at this stage. The worker later checks an execution quote and either completes the internal trade or rejects it and releases the hold.
+
+| Stage | In everyday terms |
+| --- | --- |
+| Preview | “Here is an estimate of what your instruction would do.” |
+| Admission | “We have checked and accepted your instruction for processing, and set aside its resources.” |
+| Execution and booking | “We checked again and recorded the completed internal trade, or recorded why it could not complete.” |
+
 ## Technical explanation
 
 ### Command and API boundary
@@ -69,7 +86,7 @@ sequenceDiagram
     API->>DB: Look for existing committed request
     API->>Feed: Admission quote if request is new
     API->>Tx: Admit command
-    Tx->>DB: Lock client; recheck key, policy and resources
+    Tx->>DB: Lock client and recheck key, policy and resources
     Tx->>DB: Commit order, decision, quote, reservation, job, event and outbox
     API-->>UI: Committed receipt
     Worker->>Tx: Claim eligible job
@@ -80,6 +97,8 @@ sequenceDiagram
     Tx->>DB: Atomic fill/postings/release or durable rejection
     UI->>API: Poll owned result and event cursor
 ```
+
+The diagram follows a new instruction that passes admission. An existing request returns its retained receipt, while a failed admission records a rejection without creating a reservation or execution job.
 
 The external fetch occurs outside the client lock. Admission rereads the policy under lock and rejects a changed policy instead of silently applying the old observation to new rules.
 
